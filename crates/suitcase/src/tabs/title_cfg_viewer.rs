@@ -44,6 +44,7 @@ impl TitleCfgViewer {
         ui.vertical(|ui| {
             menu::bar(ui, |ui| {
                 ui.set_height(25.0);
+                ui.add_space(10.0);
                 ui.button("Save").clicked().then(|| self.save());
                 ui.button("Toggle Raw Editor").clicked().then(|| {
                     self.toggle_editors();
