@@ -62,13 +62,14 @@ impl Vector {
 #[derive(Clone, Debug)]
 pub struct IconSys {
     pub flags: u16,
-    pub linebreak_pos: u16,
+    pub linebreak_pos: u8,
     pub background_transparency: u32,
     pub background_colors: [Color; 4],
     pub light_directions: [Vector; 3],
     pub light_colors: [ColorF; 3],
     pub ambient_color: ColorF,
-    pub title: String,
+    pub title_line1: String,
+    pub title_line2: String,
     pub icon_file: String,
     pub icon_copy_file: String,
     pub icon_delete_file: String,
@@ -84,7 +85,8 @@ impl IconSys {
         bytes.extend_from_slice(b"PS2D");
 
         bytes.extend(self.flags.to_le_bytes());
-        bytes.extend(self.linebreak_pos.to_le_bytes());
+        bytes.extend(convert_linepos(self.linebreak_pos).to_le_bytes());
+        bytes.extend(0u8.to_le_bytes()); // Reserved
         bytes.extend(0u32.to_le_bytes()); // Reserved
         bytes.extend(self.background_transparency.to_le_bytes());
 
@@ -102,7 +104,7 @@ impl IconSys {
 
         bytes.extend_from_slice(&self.ambient_color.to_bytes());
 
-        let title_bytes = encode_sjis(&self.title);
+        let title_bytes = encode_sjis(&join_title_lines(self.title_line1.clone(), self.title_line2.clone()));
         let title_len = title_bytes.len();
         if title_len > 68 {
             return Err(std::io::Error::new(
@@ -153,7 +155,8 @@ fn parse_icon_sys(bytes: Vec<u8>) -> Result<IconSys> {
     c.read_exact(&mut magic)?;
 
     let flags = c.read_u16::<LE>()?;
-    let linebreak_pos = c.read_u16::<LE>()?;
+    let linebreak_pos = convert_linepos(c.read_u8()?);
+    _ = c.read_u8(); // Reserved, always 0
     _ = c.read_u32::<LE>(); // Reserved, always 0
     let background_transparency = c.read_u32::<LE>()?;
 
@@ -188,6 +191,9 @@ fn parse_icon_sys(bytes: Vec<u8>) -> Result<IconSys> {
     let mut icon_delete_file_buf = vec![0u8; 64];
     c.read_exact(&mut icon_delete_file_buf)?;
 
+    let title = parse_sjis_string(&title_buf);
+    let (title_line1, title_line2) = split_title(linebreak_pos, title);
+
     Ok(IconSys {
         flags,
         linebreak_pos,
@@ -196,7 +202,8 @@ fn parse_icon_sys(bytes: Vec<u8>) -> Result<IconSys> {
         light_directions,
         light_colors,
         ambient_color,
-        title: parse_sjis_string(&title_buf),
+        title_line1,
+        title_line2,
         icon_file: parse_cstring(&icon_file_buf),
         icon_copy_file: parse_cstring(&icon_copy_file_buf),
         icon_delete_file: parse_cstring(&icon_delete_file_buf),
@@ -234,4 +241,31 @@ fn parse_direction(c: &mut Cursor<Vec<u8>>) -> Result<Vector> {
     let w = c.read_f32::<LE>()?;
 
     Ok(Vector { x, y, z, w })
+}
+
+/**
+ * The linebreak is stored at byte 0x06 in the 4 lower bits, but with the least significant bit first.
+ * For example a linebreak on the 5rd (0b 0000 0101) character will be represented as 0b 0000 1010.
+ * The 4 higher bits are seemingly ignored in the context of OSDMENU.
+ */
+fn convert_linepos(source: u8) -> u8 {
+    // zero out the 4 most significant bits
+    let low_half = source & 0b00001111;
+    low_half.reverse_bits() >> 4
+}
+
+fn split_title(linebreak_pos: u8, title: String) -> (String, String) {
+    if linebreak_pos >= title.len() as u8 {
+        return (title, "".to_string());
+    }
+    let (title_line1, title_line2) = title.split_at(linebreak_pos as usize);
+    // trim the leading space on line2 necessary for proper linebreak
+    (title_line1.into(), title_line2.trim_start().into())
+}
+
+fn join_title_lines(title_line1: String, title_line2: String) -> String {
+    if title_line2.len() == 0 {
+        return title_line1;
+    }
+    format!("{} {}", title_line1, title_line2)
 }
