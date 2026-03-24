@@ -168,17 +168,14 @@ impl IconSysViewer {
             Grid::new(Id::from("IconSysEditor")).num_columns(2).min_col_width(MIN_COL_WIDTH).show(ui, |ui| {
                 ui.label("Title first line");
                 ui.add(TextEdit::singleline(&mut self.title_line1));
-                if (self.title_line1.len() > 15) {
-                    ui.label(format!("OSDMENU can only handle linebreak before 15 characters. {}/15", self.title_line1.len()));
+                if self.title_line1.len() >= 16 {
+                    ui.label(format!("Must be 16 characters or less. {}/16", self.title_line1.len()));
                 }
                 ui.end_row();
                 ui.label("Title second line");
                 ui.add(TextEdit::singleline(&mut self.title_line2));
-                if self.title_len() > 34 {
-                    ui.end_row();
-                    ui.end_row();
-                    ui.label("");
-                    ui.label(RichText::new(format!("Title too long {}/34", self.title_len())).color(Color32::RED));
+                if self.title_line2.len() >= 16 {
+                    ui.label(format!("Must be 16 characters or less. {}/16", self.title_line2.len()));
                 }
             });
             ui.add_space(SEPARATOR_MARGIN);
@@ -290,13 +287,6 @@ impl IconSysViewer {
             });
         });
     }
-
-    fn title_len(&self) -> usize {
-        if self.title_line2.len() == 0 {
-            return self.title_line1.len();
-        }
-        self.title_line1.len() + self.title_line2.len() + 1 // 1 extra char for the linebreak space
-    }
 }
 
 impl Tab for IconSysViewer {
@@ -320,7 +310,7 @@ impl Tab for IconSysViewer {
         let new_sys = IconSys {
             title_line1: self.title_line1.clone(),
             title_line2: self.title_line2.clone(),
-            linebreak_pos: self.title_line1.len() as u8,
+            linebreak_pos: self.title_line1.len() as u16,
             icon_file: self.icon_file.clone(),
             icon_copy_file: self.icon_copy_file.clone(),
             icon_delete_file: self.icon_delete_file.clone(),
