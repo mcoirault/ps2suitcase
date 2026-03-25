@@ -17,27 +17,27 @@ jobs:
           - name: ubuntu
             version: ubuntu-latest
             suitcase:
-                executable: suitcase
-                asset_name: suitcase
+              executable: suitcase
+              asset_name: suitcase
             psupacker:
-                executable: psu-packersuitcase
-                asset_name: psu-packersuitcase
+              executable: psu-packersuitcase
+              asset_name: psu-packersuitcase
           - name: macos
             version: macos-latest
             suitcase:
-                executable: suitcase
-                asset_name: suitcase-macos
+              executable: suitcase
+              asset_name: suitcase-macos
             psupacker:
-                executable: psu-packersuitcase
-                asset_name: psu-packersuitcase-macos
+              executable: psu-packersuitcase
+              asset_name: psu-packersuitcase-macos
           - name: windows
             version: windows-latest
             suitcase:
-                executable: suitcase.exe
-                asset_name: suitcase.exe
+              executable: suitcase.exe
+              asset_name: suitcase.exe
             psupacker:
-                executable: psu-packersuitcase.exe
-                asset_name: psu-packersuitcase.exe
+              executable: psu-packersuitcase.exe
+              asset_name: psu-packersuitcase.exe
     runs-on: ${{matrix.os.version}}
 
     steps:
