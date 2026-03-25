@@ -20,24 +20,24 @@ jobs:
               executable: suitcase
               asset_name: suitcase
             psupacker:
-              executable: psu-packersuitcase
-              asset_name: psu-packersuitcase
+              executable: psu-packer
+              asset_name: psu-packer
           - name: macos
             version: macos-latest
             suitcase:
               executable: suitcase
               asset_name: suitcase-macos
             psupacker:
-              executable: psu-packersuitcase
-              asset_name: psu-packersuitcase-macos
+              executable: psu-packer
+              asset_name: psu-packer-macos
           - name: windows
             version: windows-latest
             suitcase:
               executable: suitcase.exe
               asset_name: suitcase.exe
             psupacker:
-              executable: psu-packersuitcase.exe
-              asset_name: psu-packersuitcase.exe
+              executable: psu-packer.exe
+              asset_name: psu-packer.exe
     runs-on: ${{matrix.os.version}}
 
     steps:
