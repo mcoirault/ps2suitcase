@@ -104,7 +104,13 @@ fn convert_toml_datetime(time: Option<Datetime>) -> Option<NaiveDateTime> {
     }
 }
 
-fn create_psu(name: &String, output: String, files: Vec<String>, timestamp: Option<NaiveDateTime>, path_prefix: &Path) -> PSU {
+fn create_psu(
+    name: &String,
+    output: String,
+    files: Vec<String>,
+    timestamp: Option<NaiveDateTime>,
+    path_prefix: &Path,
+) -> PSU {
     println!("Preparing to create {}", name);
     let mut psu = PSU::default();
 
@@ -120,7 +126,11 @@ fn create_psu(name: &String, output: String, files: Vec<String>, timestamp: Opti
         })
         .collect::<Vec<_>>();
 
-    psu.add_defaults(name, files.len(), timestamp.unwrap_or_default());
+    psu.add_defaults(
+        name,
+        files.len(),
+        timestamp.unwrap_or(Local::now().naive_local()),
+    );
 
     files.iter().for_each(|file| {
         let f = fs::read(file).unwrap();

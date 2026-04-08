@@ -61,8 +61,8 @@ impl Display for PSU {
                 entry.kind.to_string(),
                 entry.name,
                 entry.size,
-                entry.created.to_string(),
-                entry.modified.to_string()
+                entry.created.format("%Y-%m-%d %H:%M:%S"),
+                entry.modified.format("%Y-%m-%d %H:%M:%S"),
             );
         }
         write!(f, "{}", output)
