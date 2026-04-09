@@ -6,11 +6,10 @@ use crate::config::PsuConfig;
 use chrono::{DateTime, Local, NaiveDateTime};
 use clap::Parser;
 use colored::Colorize;
-use ps2_filetypes::{PSUEntry, PSUEntryKind, PSUWriter, FILE_ID, PSU};
+use ps2_filetypes::{PSUWriter, PSU};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
 use toml::value::Datetime;
 
 fn main() -> Result<(), Error> {
@@ -61,6 +60,46 @@ fn main() -> Result<(), Error> {
                 println!("{}\n\n{}\n", psu, "--------".dimmed());
             });
         }
+        Commands::Add(args) => {
+            let file = fs::read(&args.psu)?;
+            let mut psu = PSU::new(file.clone());
+
+            args.files.iter().for_each(|file| match psu.add_file(file) {
+                Ok(_) => println!("+ Adding {}", file.green()),
+                Err(_) => eprintln!("⚠ File {} doesn't exist. Skipping.", file.dimmed()),
+            });
+
+            fs::write(
+                &args.psu,
+                PSUWriter::new(psu.clone())
+                    .to_bytes()
+                    .expect("Couldn't generate the PSU file"),
+            )
+            .expect("Couldn't overwrite the PSU");
+
+            println!("\n{}", psu);
+        }
+        Commands::Delete(args) => {
+            let file = fs::read(&args.psu)?;
+            let mut psu = PSU::new(file.clone());
+
+            args.entries
+                .iter()
+                .for_each(|entry| match psu.remove_entry(entry) {
+                    Ok(_) => println!("+ Removing {}", entry.green()),
+                    Err(_) => eprintln!("⚠ Entry {} doesn't exist. Skipping.", entry.dimmed()),
+                });
+
+            fs::write(
+                &args.psu,
+                PSUWriter::new(psu.clone())
+                    .to_bytes()
+                    .expect("Couldn't generate the PSU file"),
+            )
+            .expect("Couldn't overwrite the PSU");
+
+            println!("\n{}", psu);
+        }
     }
 
     Ok(())
@@ -68,16 +107,6 @@ fn main() -> Result<(), Error> {
 
 fn get_output_filename(output: &Option<String>, name: &String) -> String {
     output.to_owned().unwrap_or(format!("{}.psu", name))
-}
-
-fn convert_timestamp(time: SystemTime) -> NaiveDateTime {
-    let duration = time.duration_since(UNIX_EPOCH).unwrap();
-    let local = DateTime::from_timestamp(duration.as_secs() as i64, duration.subsec_nanos())
-        .unwrap()
-        .with_timezone(&Local)
-        .naive_local();
-
-    local
 }
 
 fn convert_toml_datetime(time: Option<Datetime>) -> Option<NaiveDateTime> {
@@ -126,34 +155,11 @@ fn create_psu(
         })
         .collect::<Vec<_>>();
 
-    psu.add_defaults(
-        name,
-        files.len(),
-        timestamp.unwrap_or(Local::now().naive_local()),
-    );
+    psu.add_defaults(name, timestamp.unwrap_or(Local::now().naive_local()));
 
     files.iter().for_each(|file| {
-        let f = fs::read(file).unwrap();
-        let stat = fs::metadata(file).unwrap();
-        let filename = Path::new(file)
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        println!("+ Adding {}", filename.green());
-
-        psu.entries.push(PSUEntry {
-            id: FILE_ID,
-            size: f.len() as u32,
-            created: convert_timestamp(stat.created().unwrap()),
-            sector: 0,
-            modified: convert_timestamp(stat.modified().unwrap()),
-            name: filename,
-            kind: PSUEntryKind::File,
-            contents: Some(f),
-        })
+        psu.add_file(file);
+        println!("+ Adding {}", file.green());
     });
 
     fs::write(
